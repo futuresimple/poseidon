@@ -141,7 +141,7 @@ module Poseidon
             # IO.select returns nil when the socket is not ready before timeout
             # seconds have elapsed
             socket.close
-            raise "Connection timeout"
+            raise TimeoutException
           end
         end
       end

@@ -67,7 +67,7 @@ module Poseidon
       Connection.open(host, port, @client_id, @socket_timeout_ms) do |connection|
         connection.topic_metadata(topics)
       end
-    rescue Connection::ConnectionFailedError
+    rescue Connection::ConnectionFailedError, Connection::TimeoutException
       return nil
     end
 
