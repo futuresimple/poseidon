@@ -147,7 +147,7 @@ module Poseidon
       else
         messages_for_broker.successfully_sent(response)
       end
-    rescue Connection::ConnectionFailedError
+    rescue Connection::ConnectionFailedError, Connection::TimeoutException
       false
     end
   end
