@@ -26,7 +26,7 @@ module Poseidon
     def initialize(topic, value, key = nil)
       raise ArgumentError, "Must provide a non-nil topic" if topic.nil?
       @topic  = topic
-      @value  = value
+      @value  = value.dup.force_encoding('ASCII-8BIT')
       @key    = key
     end
   end
