@@ -11,6 +11,6 @@ RSpec.describe MessageToSend do
   it "encodes messages to ascii" do
     checkmark = "\u2713".encode('utf-8')
     mts = MessageToSend.new("hello_topic", checkmark, "key")
-    expect(mts.value).to include("\xE2")
+    expect(mts.value.encoding).to eq(Encoding::ASCII_8BIT)
   end
 end
