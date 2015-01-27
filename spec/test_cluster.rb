@@ -168,13 +168,14 @@ class BrokerRunner
                          DEFAULT_PROPERTIES.merge(
                            "broker.id" => id,
                            "port" => port,
-                           "log.dir" => "#{POSEIDON_PATH}/tmp/kafka-logs_#{id}",
+                           "log.dir" => @log_dir,
                            "default.replication.factor" => replication_factor,
                            "num.partitions" => partition_count
                          ).merge(properties))
   end
 
   def start
+    FileUtils.mkdir_p(@log_dir)
     @jr.start
   end
 
@@ -190,6 +191,8 @@ end
 
 class ZookeeperRunner
   def initialize
+    @data_dir = "#{POSEIDON_PATH}/tmp/zookeeper"
+
     @jr = JavaRunner.new("zookeeper",
                          "#{ENV['KAFKA_PATH']}/bin/zookeeper-server-start.sh",
                          "ps ax | grep -i 'zookeeper' | grep -v grep | awk '{print $1}'",
@@ -202,8 +205,9 @@ class ZookeeperRunner
   def pid
     @jr.pid
   end
-  
+
   def start
+    FileUtils.mkdir_p(@data_dir)
     @jr.start
   end
 

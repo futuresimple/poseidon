@@ -1,6 +1,15 @@
 require 'integration/multiple_brokers/spec_helper'
 
 RSpec.describe "round robin sending", :type => :request do
+  before(:each) do
+    @tc = ThreeBrokerCluster.new
+    @tc.start
+  end
+
+  after(:each) do
+    @tc.stop
+  end
+
   describe "with small message batches" do
     it "evenly distributes messages across brokers" do
       c = Connection.new("localhost", 9092, "metadata_fetcher", 10_000)

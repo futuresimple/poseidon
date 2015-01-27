@@ -30,6 +30,6 @@ require 'coveralls'
 Coveralls.wear!
 
 def spec_sleep(time, reason)
-  SPEC_LOGGER.info("Sleeping #{time}, reason: #{reason}...")
+  SPEC_LOGGER.info("Sleeping #{time}s, reason: #{reason}...")
   sleep time
 end

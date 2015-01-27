@@ -3,10 +3,17 @@ require 'integration/multiple_brokers/spec_helper'
 RSpec.describe "handling failures", :type => :request do
   describe "metadata failures" do
     before(:each) do
+      @tc = ThreeBrokerCluster.new
+      @tc.start
+
       @messages_to_send = [
         MessageToSend.new("topic1", "hello"),
         MessageToSend.new("topic2", "hello")
       ]
+    end
+
+    after(:each) do
+      @tc.stop
     end
 
     describe "unable to connect to brokers" do
