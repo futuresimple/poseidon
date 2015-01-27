@@ -5,7 +5,7 @@ RSpec.describe "consuming with multiple brokers", :type => :request do
     # autocreate the topic by asking for information about it
     c = Connection.new("localhost", 9092, "metadata_fetcher", 10_000)
     md = c.topic_metadata(["test"])
-    sleep 1
+    spec_sleep 1, "sreating topic"
   end
 
   it "finds the lead broker for each partition" do
