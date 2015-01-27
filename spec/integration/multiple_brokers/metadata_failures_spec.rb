@@ -30,7 +30,7 @@ RSpec.describe "handling failures", :type => :request do
   end
 
   describe "unknown topic" do
-    it "receives error callback" do
+    xit "receives error callback" do
       pending "need a way to turn off auto-topic creation just for this test"
       @p = Producer.new(["localhost:9092","localhost:9093","localhost:9094"], "producer")
 
