@@ -14,13 +14,17 @@ class TestCluster
     # The broker will end up in a state where it ignores SIGTERM
     # if zookeeper is stopped before the broker.
     @broker.stop
-    sleep 5
+    spec_sleep(5, "TestCluster::broker.stop")
 
     @zookeeper.stop
   end
 end
 
 class JavaRunner
+  KILL_SIGNALS = {
+    sigterm: 15,
+    sigkill: 9
+  }
   def self.remove_tmp
     FileUtils.rm_rf("#{POSEIDON_PATH}/tmp")
   end
@@ -47,7 +51,7 @@ class JavaRunner
     @properties = properties
     @start_cmd = start_cmd
     @pid_cmd = pid_cmd
-    @kill_signal = kill_signal
+    @kill_signal = KILL_SIGNALS[kill_signal] || 9
     @stopped = false
   end
 
@@ -69,24 +73,24 @@ class JavaRunner
           raise "Failed to kill process!"
         end
 
-        SPEC_LOGGER.info "Sending #{@kill_signal} To #{pid}"
+        SPEC_LOGGER.info "Sending signal #{@kill_signal} to #{pid}"
         SPEC_LOGGER.info "(#{@start_cmd})"
-        `kill -#{@kill_signal} #{pid}`
+        system "kill -#{@kill_signal} #{pid} > /dev/null 2>&1"
 
-        sleep 5
+        spec_sleep 0.5, "In loop with KILL"
       end
+
       @stopped = true
     end
   end
 
   def without_process
     stop
-    sleep 5
     begin
       yield
     ensure
       start
-      sleep 5
+      spec_sleep 5, "JavaRunner::without_process, ensuring process has started"
     end
   end
 
@@ -94,7 +98,7 @@ class JavaRunner
 
   def run
     FileUtils.mkdir_p(log_dir)
-    `LOG_DIR=#{log_dir} #{@start_cmd} #{config_path}`
+    system "LOG_DIR=#{log_dir} #{@start_cmd} #{config_path} >> tmp/log/stdout.log 2>&1 &"
     @stopped = false
   end
 
@@ -156,20 +160,22 @@ class BrokerRunner
   def initialize(id, port, partition_count = 1, replication_factor = 1, properties = {})
     @id   = id
     @port = port
-    @jr = JavaRunner.new("broker_#{id}", 
-                         "#{ENV['KAFKA_PATH']}/bin/kafka-run-class.sh -daemon -name broker_#{id} kafka.Kafka",
+    @log_dir = DEFAULT_PROPERTIES["log.dir"] + "_broker_#{id}"
+    @jr = JavaRunner.new("broker_#{id}",
+                         "#{ENV['KAFKA_PATH']}/bin/kafka-run-class.sh -name broker_#{id} kafka.Kafka",
                          "ps ax | grep -i 'kafka\.Kafka' | grep java | grep broker_#{id} | grep -v grep | awk '{print $1}'",
-                         "SIGTERM",
+                         :sigterm,
                          DEFAULT_PROPERTIES.merge(
                            "broker.id" => id,
                            "port" => port,
-                           "log.dir" => "#{POSEIDON_PATH}/tmp/kafka-logs_#{id}",
+                           "log.dir" => @log_dir,
                            "default.replication.factor" => replication_factor,
                            "num.partitions" => partition_count
                          ).merge(properties))
   end
 
   def start
+    FileUtils.mkdir_p(@log_dir)
     @jr.start
   end
 
@@ -185,11 +191,13 @@ end
 
 class ZookeeperRunner
   def initialize
+    @data_dir = "#{POSEIDON_PATH}/tmp/zookeeper"
+
     @jr = JavaRunner.new("zookeeper",
-                         "#{ENV['KAFKA_PATH']}/bin/zookeeper-server-start.sh -daemon",
+                         "#{ENV['KAFKA_PATH']}/bin/zookeeper-server-start.sh",
                          "ps ax | grep -i 'zookeeper' | grep -v grep | awk '{print $1}'",
-                         "SIGKILL",
-                         :dataDir => "#{POSEIDON_PATH}/tmp/zookeeper",
+                         :sigkill,
+                         :dataDir => @data_dir,
                          :clientPort => 2181,
                          :maxClientCnxns => 0)
   end
@@ -197,8 +205,9 @@ class ZookeeperRunner
   def pid
     @jr.pid
   end
-  
+
   def start
+    FileUtils.mkdir_p(@data_dir)
     @jr.start
   end
 

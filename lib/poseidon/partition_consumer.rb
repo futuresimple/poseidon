@@ -153,7 +153,7 @@ module Poseidon
     def handle_options(options)
       @max_bytes         = options.delete(:max_bytes) || 1024*1024
       @min_bytes         = options.delete(:min_bytes) || 1
-      @max_wait_ms       = options.delete(:max_wait_ms) || 10_000
+      @max_wait_ms       = options.delete(:max_wait_ms) || 100
       @socket_timeout_ms = options.delete(:socket_timeout_ms) || @max_wait_ms + 10_000
 
       if @socket_timeout_ms < @max_wait_ms

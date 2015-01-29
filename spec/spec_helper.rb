@@ -24,6 +24,12 @@ SimpleCov.start
 
 require 'poseidon'
 include Poseidon
+Poseidon.logger = SPEC_LOGGER
 
 require 'coveralls'
 Coveralls.wear!
+
+def spec_sleep(time, reason)
+  SPEC_LOGGER.info("Sleeping #{time}s, reason: #{reason}...")
+  sleep time
+end

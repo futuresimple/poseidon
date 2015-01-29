@@ -3,10 +3,17 @@ require 'integration/multiple_brokers/spec_helper'
 RSpec.describe "handling failures", :type => :request do
   describe "metadata failures" do
     before(:each) do
+      @tc = ThreeBrokerCluster.new
+      @tc.start
+
       @messages_to_send = [
         MessageToSend.new("topic1", "hello"),
         MessageToSend.new("topic2", "hello")
       ]
+    end
+
+    after(:each) do
+      @tc.stop
     end
 
     describe "unable to connect to brokers" do
@@ -23,7 +30,7 @@ RSpec.describe "handling failures", :type => :request do
   end
 
   describe "unknown topic" do
-    it "receives error callback" do
+    xit "receives error callback" do
       pending "need a way to turn off auto-topic creation just for this test"
       @p = Producer.new(["localhost:9092","localhost:9093","localhost:9094"], "producer")
 

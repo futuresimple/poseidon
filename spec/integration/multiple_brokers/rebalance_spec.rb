@@ -2,10 +2,17 @@ require 'integration/multiple_brokers/spec_helper'
 
 RSpec.describe "producer handles rebalancing", :type => :request do
   before(:each) do
+    @tc = ThreeBrokerCluster.new
+    @tc.start
+
     # autocreate the topic by asking for information about it
     @c = Connection.new("localhost", 9093, "metadata_fetcher", 10_000)
     @c.topic_metadata(["failure_spec"])
-    sleep 1
+    spec_sleep 1, "creating topic"
+  end
+
+  after(:each) do
+    @tc.stop
   end
 
   def current_leadership_mapping(c)
@@ -33,15 +40,15 @@ RSpec.describe "producer handles rebalancing", :type => :request do
     #
     # We compare leadership before and after the message sending period
     # to make sure we were successful.
-    $tc.stop_first_broker
-    sleep 30
+    @tc.stop_first_broker
+    spec_sleep 30, "stopping first broker waiting for Kafka to move leader"
     SPEC_LOGGER.info "Pre start #{current_leadership_mapping(@c).inspect}"
-    $tc.start_first_broker
+    @tc.start_first_broker
 
     pre_send_leadership = current_leadership_mapping(@c)
     SPEC_LOGGER.info "Pre send #{pre_send_leadership.inspect}"
     26.upto(50) do |n|
-      sleep 0.5
+      spec_sleep 0.5, "between sending messages"
       @p.send_messages([MessageToSend.new("failure_spec", n.to_s)])
     end
     post_send_leadership = current_leadership_mapping(@c)

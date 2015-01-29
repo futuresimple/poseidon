@@ -1,11 +1,20 @@
 require 'integration/multiple_brokers/spec_helper'
 
 RSpec.describe "round robin sending", :type => :request do
+  before(:each) do
+    @tc = ThreeBrokerCluster.new
+    @tc.start
+  end
+
+  after(:each) do
+    @tc.stop
+  end
+
   describe "with small message batches" do
     it "evenly distributes messages across brokers" do
       c = Connection.new("localhost", 9092, "metadata_fetcher", 10_000)
       md = c.topic_metadata(["test"])
-      sleep 1
+      spec_sleep 1, "between sending messages"
       md = c.topic_metadata(["test"])
 
       test_topic = md.topics.first
@@ -28,7 +37,7 @@ RSpec.describe "round robin sending", :type => :request do
         @p.send_messages([MessageToSend.new("test", "hello")])
       end
 
-      sleep 5
+      spec_sleep 5, "after sending, but before reading the messages"
 
       consumers.each do |c|
         messages = c.fetch
