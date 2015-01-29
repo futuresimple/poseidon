@@ -97,7 +97,7 @@ RSpec.describe PartitionConsumer do
     end
 
     it "uses object defaults" do
-      expect(@connection).to receive(:fetch).with(10_000, 1, anything)
+      expect(@connection).to receive(:fetch).with(100, 1, anything)
       @pc.fetch
     end
 
