@@ -1,3 +1,7 @@
+# 0.0.10
+
+* Use nonblocking socket creation, thus obey timeouts
+
 # 0.0.5
 
 * Add support for negative offsets. [GH-24]
