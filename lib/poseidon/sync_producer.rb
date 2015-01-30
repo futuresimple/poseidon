@@ -40,17 +40,16 @@ module Poseidon
       return if messages.empty?
 
       messages_to_send = MessagesToSend.new(messages, @cluster_metadata)
-
-      if refresh_interval_elapsed?
-        refresh_metadata(messages_to_send.topic_set)
-      end
-
-      ensure_metadata_available_for_topics(messages_to_send)
+      metadata_is_fresh = false
 
       (@max_send_retries+1).times do
-        messages_to_send.messages_for_brokers(@message_conductor).each do |messages_for_broker|
-          if sent = send_to_broker(messages_for_broker)
-            messages_to_send.successfully_sent(sent)
+        metadata_is_fresh = ensure_metadata_available_for_topics(messages_to_send)
+
+        if metadata_is_fresh
+          messages_to_send.messages_for_brokers(@message_conductor).each do |messages_for_broker|
+            if sent = send_to_broker(messages_for_broker)
+              messages_to_send.successfully_sent(sent)
+            end
           end
         end
 
@@ -62,7 +61,9 @@ module Poseidon
         end
       end
 
-      if messages_to_send.pending_messages?
+      if !metadata_is_fresh
+        raise Errors::UnableToFetchMetadata
+      elsif messages_to_send.pending_messages?
         raise "Failed to send all messages: #{messages_to_send.messages} remaining"
       else
         true
@@ -78,20 +79,17 @@ module Poseidon
     private
 
     def ensure_metadata_available_for_topics(messages_to_send)
-      return if !messages_to_send.needs_metadata?
+      return true unless messages_to_send.needs_metadata? || refresh_interval_elapsed?
 
-      Poseidon.logger.debug { "Fetching metadata for #{messages_to_send.topic_set}. (Attempt 1)" }
+      Poseidon.logger.debug { "Fetching metadata for #{messages_to_send.topic_set}." }
       refresh_metadata(messages_to_send.topic_set)
-      return if !messages_to_send.needs_metadata?
 
-      2.times do |n|
-        sleep 5
-
-        Poseidon.logger.debug { "Fetching metadata for #{messages_to_send.topic_set}. (Attempt #{n+2})" }
-        refresh_metadata(messages_to_send.topic_set)
-        return if !messages_to_send.needs_metadata?
+      if messages_to_send.needs_metadata?
+        Poseidon.logger.debug { "Failed to fetch metadata for #{messages_to_send.topic_set}." }
+        return false
+      else
+        return true
       end
-      raise Errors::UnableToFetchMetadata
     end
 
     def handle_options(options)
