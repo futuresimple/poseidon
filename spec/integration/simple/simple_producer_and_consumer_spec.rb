@@ -117,4 +117,43 @@ RSpec.describe "simple producer and consumer", :type => :request do
       end
     end
   end
+
+  context "fetch metadata fails" do
+    let(:topic) { "topic" }
+    let(:max_send_retries) { 7 }
+    let(:retry_backoff_ms) { 10 }
+    let(:opts) { {
+      :max_send_retries => max_send_retries,
+      :retry_backoff_ms => retry_backoff_ms,
+    } }
+    let(:producer) { SyncProducer.new("test_client", ["localhost:9092"], opts) }
+    let(:message)  { Message.new(:topic => topic, :value => "value") }
+    let(:empty_metadata) { Protocol::MetadataResponse.new(nil, [], []) }
+
+    before do
+      c = Connection.new("localhost", 9092, "metadata_fetcher", 10_000)
+      md = c.topic_metadata([topic])
+      spec_sleep 1, "creating topic"
+    end
+
+    it "retries to fetch metadata" do
+      broker_pool = producer.instance_variable_get :@broker_pool
+      expect(broker_pool).to receive(:fetch_metadata).at_least(max_send_retries).times.and_return(empty_metadata)
+
+      expect { producer.send_messages([message]) }.to raise_error(Poseidon::Errors::UnableToFetchMetadata)
+    end
+
+    it "continues when metadata becomes available" do
+      broker_pool = producer.instance_variable_get :@broker_pool
+
+      mt = Array.new(max_send_retries-1, empty_metadata) << broker_pool.fetch_metadata([topic])
+      expect(broker_pool).to receive(:fetch_metadata).and_return *mt
+
+      expect(producer.send_messages([message])).to eq(true)
+
+      @consumer = PartitionConsumer.new("test_consumer", "localhost", 9092, topic, 0, :earliest_offset)
+      messages = @consumer.fetch
+      expect(messages.last.value).to eq("value")
+    end
+  end
 end
