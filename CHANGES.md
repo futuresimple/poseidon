@@ -1,3 +1,7 @@
+# 0.0.11
+
+* Include metadata in retry loop with timeout
+
 # 0.0.10
 
 * Use nonblocking socket creation, thus obey timeouts
