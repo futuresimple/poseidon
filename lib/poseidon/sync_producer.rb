@@ -37,7 +37,7 @@ module Poseidon
     end
 
     def send_messages(messages)
-      return if messages.empty?
+      return [] if messages.empty?
 
       messages_to_send = MessagesToSend.new(messages, @cluster_metadata)
       metadata_is_fresh = false
@@ -54,7 +54,7 @@ module Poseidon
         end
 
         if !messages_to_send.pending_messages? || @max_send_retries == 0
-          break
+          return []
         else
           Kernel.sleep retry_backoff_ms / 1000.0
           refresh_metadata(messages_to_send.topic_set)
@@ -64,9 +64,9 @@ module Poseidon
       if !metadata_is_fresh
         raise Errors::UnableToFetchMetadata
       elsif messages_to_send.pending_messages?
-        raise "Failed to send all messages: #{messages_to_send.messages} remaining"
+        messages_to_send.messages
       else
-        true
+        []
       end
     end
 
