@@ -103,7 +103,8 @@ module Poseidon
       if @socket.nil? || @socket.closed?
         begin
           @socket = connect_with_timeout(@host, @port, @socket_timeout_ms / 1000.0)
-        rescue SystemCallError
+        rescue SystemCallError => e
+          Poseidon.logger.debug("Connection failed ensure_connected #{e.class}:#{e.message}")
           raise_connection_failed_error
         end
       end
@@ -139,14 +140,16 @@ module Poseidon
     def read_response(response_class)
       r = ensure_read_or_timeout(4)
       if r.nil?
+        Poseidon.logger.debug("Connection failed read_response empty read")
         raise_connection_failed_error
       end
       n = r.unpack("N").first
       s = ensure_read_or_timeout(n)
       buffer = Protocol::ResponseBuffer.new(s)
       response_class.read(buffer)
-    rescue Errno::ECONNRESET, SocketError, TimeoutException
+    rescue Errno::ECONNRESET, SocketError, TimeoutException => e
       @socket = nil
+      Poseidon.logger.debug("Connection failed read_response #{e.class}:#{e.message}")
       raise_connection_failed_error
     end
 
@@ -162,8 +165,9 @@ module Poseidon
       buffer = Protocol::RequestBuffer.new
       request.write(buffer)
       ensure_write_or_timeout([buffer.to_s.bytesize].pack("N") + buffer.to_s)
-    rescue Errno::EPIPE, Errno::ECONNRESET, TimeoutException
+    rescue Errno::EPIPE, Errno::ECONNRESET, TimeoutException => e
       @socket = nil
+      Poseidon.logger.debug("Connection failed send_request #{e.class}:#{e.message}")
       raise_connection_failed_error
     end
 
