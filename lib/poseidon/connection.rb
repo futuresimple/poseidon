@@ -140,6 +140,7 @@ module Poseidon
     def read_response(response_class)
       r = ensure_read_or_timeout(4)
       if r.nil?
+        @socket = nil
         Poseidon.logger.debug("Connection failed read_response empty read")
         raise_connection_failed_error
       end
