@@ -1,3 +1,8 @@
+# 0.1.0
+
+* Reset connection on empty reads
+* Log warning in crucial places and rescue statements related to keeping connection
+
 # 0.0.11
 
 * Include metadata in retry loop with timeout
